@@ -22,14 +22,18 @@
   let toastTimer = null;
   let runtimeMode = 'menu'; // menu | local | online
   let onlineContext = { inRoom: false, roomStatus: null, isHost: false, uid: null, player: null, secretReady: false };
+  const candidateIds = new Set();
+  let candidateContextKey = '';
+  let candidateConfirmBusy = false;
+
 
   function cacheRefs() {
     [
-      'uiLanguageGlobal','onlineHomeSection','lobbySection','playLocalBtn','setupSection','gameSection','addPlayerBtn','randomTeamsBtn','randomSpiesBtn','playersContainer',
+      'uiLanguageGlobal','soundToggleBtn','soundVolume','onlineHomeSection','lobbySection','playLocalBtn','setupSection','gameSection','addPlayerBtn','randomTeamsBtn','randomSpiesBtn','playersContainer',
       'cardLanguageSelect','wordSourceSelect','strictCluesCheckbox','expertRulesCheckbox','manageWordsBtn','customWordsStatus','setupMessage','startGameBtn',
-      'currentTeamValue','startingTeamValue','redRemaining','blueRemaining','phaseValue','viewModeLabel','secretWarning','board',
+      'currentTeamValue','startingTeamValue','redRemaining','blueRemaining','phaseValue','viewModeLabel','secretWarning','board','teamRosterPanel','redRoster','blueRoster','spectatorRoster',
       'currentClueValue','guessCounter','expertHint','spymasterControls','clueForm','clueTextInput','clueModeSelect','clueNumberField','clueNumberInput','clueValidationMessage',
-      'penaltyPanel','penaltyCandidates','skipPenaltyBtn','spymasterKeyBtn','hideSpymasterBtn','challengeClueBtn','endTurnBtn','actionMessage','winnerPanel','winnerValue','winnerReason',
+      'penaltyPanel','penaltyCandidates','skipPenaltyBtn','candidatePanel','candidateList','clearCandidatesBtn','spymasterKeyBtn','hideSpymasterBtn','challengeClueBtn','endTurnBtn','actionMessage','winnerPanel','winnerValue','winnerReason',
       'gameLogBtn','errorLogBtn','resetGameBtn','newGameBtn','privacyDialog','holdRevealBtn','holdProgress','challengeDialog','challengeClueText','allowClueBtn','rejectClueBtn',
       'logsDialog','logsTitle','closeLogsBtn','logsContent','copyLogsBtn','downloadLogsBtn','clearLogsBtn','wordsDialog','closeWordsBtn','wordFormatSelect','wordFileInput','wordTextarea',
       'wordImportResult','importWordsBtn','revertWordsBtn','toast'
@@ -45,8 +49,8 @@
     document.title = I.t('appTitle');
   }
 
-  function teamLabel(team) { return I.t(team === 'blue' ? 'blue' : 'red'); }
-  function roleLabel(role) { return I.t(role === 'spymaster' ? 'spymaster' : 'operative'); }
+  function teamLabel(team) { if (team === 'spectator') return I.t('spectator'); return I.t(team === 'blue' ? 'blue' : 'red'); }
+  function roleLabel(role) { if (role === 'spectator') return I.t('spectator'); return I.t(role === 'spymaster' ? 'spymaster' : 'operative'); }
 
   function isOnline() { return runtimeMode === 'online'; }
   function myOnlinePlayer() { return onlineContext && onlineContext.player ? onlineContext.player : null; }
@@ -129,7 +133,7 @@
 
       const teamSelect = document.createElement('select');
       teamSelect.dataset.field = 'team';
-      [['red', I.t('red')], ['blue', I.t('blue')]].forEach(([value, label]) => {
+      [['red', I.t('red')], ['blue', I.t('blue')], ['spectator', I.t('spectator')]].forEach(([value, label]) => {
         const option = document.createElement('option'); option.value = value; option.textContent = label; teamSelect.appendChild(option);
       });
       teamSelect.value = player.team;
@@ -137,7 +141,7 @@
 
       const roleSelect = document.createElement('select');
       roleSelect.dataset.field = 'role';
-      [['operative', I.t('operative')], ['spymaster', I.t('spymaster')]].forEach(([value, label]) => {
+      [['operative', I.t('operative')], ['spymaster', I.t('spymaster')], ['spectator', I.t('spectator')]].forEach(([value, label]) => {
         const option = document.createElement('option'); option.value = value; option.textContent = label; roleSelect.appendChild(option);
       });
       roleSelect.value = player.role;
@@ -160,7 +164,19 @@
     const player = setupPlayers.find((item) => item.id === row.dataset.playerId);
     if (!player) return;
     const field = event.target.dataset.field;
-    if (field === 'name' || field === 'team' || field === 'role') player[field] = event.target.value;
+    if (field === 'name') player.name = event.target.value;
+    if (field === 'team') {
+      player.team = event.target.value;
+      if (player.team === 'spectator') player.role = 'spectator';
+      else if (player.role === 'spectator') player.role = 'operative';
+      renderPlayers();
+    }
+    if (field === 'role') {
+      player.role = event.target.value;
+      if (player.role === 'spectator') player.team = 'spectator';
+      else if (player.team === 'spectator') player.team = 'red';
+      renderPlayers();
+    }
   }
 
   function handlePlayerClick(event) {
@@ -172,8 +188,8 @@
   }
 
   function addPlayer() {
-    const redCount = setupPlayers.filter((p) => p.team === 'red').length;
-    const blueCount = setupPlayers.filter((p) => p.team === 'blue').length;
+    const redCount = setupPlayers.filter((p) => p.team === 'red' && p.role !== 'spectator').length;
+    const blueCount = setupPlayers.filter((p) => p.team === 'blue' && p.role !== 'spectator').length;
     const team = redCount <= blueCount ? 'red' : 'blue';
     setupPlayers.push({ id: `player-${playerSequence}`, name: `Player ${playerSequence}`, team, role: 'operative' });
     playerSequence += 1;
@@ -213,11 +229,19 @@
       setMessage(refs.setupMessage, `${I.t('setupError')} ${result.errors ? result.errors.join(', ') : result.code}`, 'error');
       return;
     }
+    candidateIds.clear(); candidateContextKey = '';
     viewMode = 'operative';
     render(result.state);
   }
 
   function renderWordText(card, state, button) {
+    if (card.revealed && viewMode === 'operative') {
+      const picked = document.createElement('span');
+      picked.className = 'card-picked';
+      picked.textContent = `✓ ${I.t('picked')}`;
+      button.appendChild(picked);
+      return;
+    }
     const mode = state.settings.cardLanguage;
     const primary = document.createElement('span');
     primary.className = 'card-primary';
@@ -238,6 +262,12 @@
       primary.textContent = card.en;
       secondary.textContent = card.ar;
       button.append(primary, secondary);
+    }
+    if (card.revealed && viewMode === 'spymaster') {
+      const picked = document.createElement('span');
+      picked.className = 'picked-badge';
+      picked.textContent = `✓ ${I.t('picked')}`;
+      button.appendChild(picked);
     }
   }
 
@@ -270,9 +300,12 @@
         button.append(role);
       }
       if (card.revealed) button.classList.add('revealed');
+      if (!card.revealed && candidateIds.has(card.id)) { button.classList.add('candidate-selected'); button.setAttribute('aria-pressed', 'true'); }
+      else button.setAttribute('aria-pressed', 'false');
 
       const accessibleWords = state.settings.cardLanguage === 'ar' ? card.ar : state.settings.cardLanguage === 'en' ? card.en : `${card.ar} / ${card.en}`;
-      button.setAttribute('aria-label', roleVisible ? `${accessibleWords}. ${roleText(card.role)}.` : accessibleWords);
+      const accessibleBase = card.revealed && viewMode === 'operative' ? I.t('picked') : accessibleWords;
+      button.setAttribute('aria-label', roleVisible ? `${accessibleBase}. ${roleText(card.role)}.` : accessibleBase);
       button.disabled = card.revealed || state.status !== 'guessing' || viewMode !== 'operative' || !canGuessOnline || Boolean(state.clueChallenge && state.clueChallenge.status === 'pending');
       refs.board.appendChild(button);
     });
@@ -312,7 +345,69 @@
     });
   }
 
+  function renderRoster(state) {
+    const buckets = { red: refs.redRoster, blue: refs.blueRoster, spectator: refs.spectatorRoster };
+    Object.values(buckets).forEach((node) => node && node.replaceChildren());
+    (state.players || []).forEach((player) => {
+      const key = player.team === 'spectator' || player.role === 'spectator' ? 'spectator' : player.team;
+      const host = buckets[key];
+      if (!host) return;
+      const item = document.createElement('div');
+      item.className = 'roster-player';
+      const icon = player.role === 'spymaster' ? '🕵️' : player.role === 'spectator' ? '👁️' : '🎯';
+      item.textContent = `${icon} ${player.name} · ${roleLabel(player.role)}`;
+      host.appendChild(item);
+    });
+    if (refs.spectatorRoster && !refs.spectatorRoster.children.length) {
+      const empty = document.createElement('span'); empty.className = 'small muted'; empty.textContent = '—'; refs.spectatorRoster.appendChild(empty);
+    }
+  }
+
+  function cardDisplayName(card, state) {
+    if (state.settings.cardLanguage === 'ar') return card.ar;
+    if (state.settings.cardLanguage === 'en') return card.en;
+    return I.getLanguage() === 'ar' ? `${card.ar} / ${card.en}` : `${card.en} / ${card.ar}`;
+  }
+
+  function candidateContext(state) {
+    return `${state.roundId || ''}|${state.currentTeam || ''}|${state.currentClue ? state.currentClue.submittedAt : ''}|${state.status}`;
+  }
+
+  function syncCandidateContext(state) {
+    const key = candidateContext(state);
+    if (candidateContextKey && candidateContextKey !== key) { candidateIds.clear(); candidateConfirmBusy = false; }
+    candidateContextKey = key;
+    if (state.status !== 'guessing') candidateIds.clear();
+  }
+
+  function canCurrentClientGuess(state) {
+    if (!isOnline()) return true;
+    const player = myOnlinePlayer();
+    return Boolean(player && player.role === 'operative' && player.team === state.currentTeam);
+  }
+
+  function renderCandidates(state) {
+    const show = state.status === 'guessing' && viewMode === 'operative' && canCurrentClientGuess(state) && !(state.clueChallenge && state.clueChallenge.status === 'pending');
+    refs.candidatePanel.hidden = !show;
+    refs.candidateList.replaceChildren();
+    if (!show) return;
+    const cards = state.board.filter((card) => candidateIds.has(card.id) && !card.revealed);
+    if (!cards.length) {
+      const empty = document.createElement('p'); empty.className = 'small muted candidate-empty'; empty.textContent = I.t('candidateHelp'); refs.candidateList.appendChild(empty); return;
+    }
+    cards.forEach((card) => {
+      const row = document.createElement('div'); row.className = 'candidate-item';
+      const name = document.createElement('strong'); name.textContent = cardDisplayName(card, state);
+      const confirm = document.createElement('button'); confirm.type = 'button'; confirm.className = 'button primary small-button'; confirm.dataset.confirmCardId = card.id; confirm.textContent = I.t('confirmGuess'); confirm.disabled = candidateConfirmBusy;
+      row.append(name, confirm); refs.candidateList.appendChild(row);
+    });
+  }
+
   function renderGame(state) {
+    syncCandidateContext(state);
+    refs.gameSection.classList.toggle('turn-red', state.status !== 'ended' && state.currentTeam === 'red');
+    refs.gameSection.classList.toggle('turn-blue', state.status !== 'ended' && state.currentTeam === 'blue');
+    refs.gameSection.classList.toggle('game-ended', state.status === 'ended');
     refs.currentTeamValue.textContent = state.currentTeam ? teamLabel(state.currentTeam) : '—';
     refs.currentTeamValue.className = `team-chip ${state.currentTeam || ''}`;
     refs.startingTeamValue.textContent = state.startingTeam ? teamLabel(state.startingTeam) : '—';
@@ -324,8 +419,10 @@
     refs.secretWarning.textContent = I.t('rolesVisibleWarning');
 
     renderClue(state);
+    renderRoster(state);
     renderBoard(state);
     renderPenalty(state);
+    renderCandidates(state);
 
     const player = myOnlinePlayer();
     const canSpy = canUseSpymasterView();
@@ -411,24 +508,71 @@
     render(G.getState());
   }
 
+  async function logCandidateEvent(eventType, data) {
+    if (isOnline()) return requestOnlineAction('candidateLog', { eventType, data: data || {} });
+    G.logEvent(eventType, data || {});
+    return { ok: true };
+  }
+
   async function handleBoardClick(event) {
     const button = event.target.closest('[data-card-id]');
-    if (!button || button.disabled || viewMode !== 'operative') return;
-    const before = G.getState();
-    const teamBefore = before.currentTeam;
-    const result = isOnline() ? await requestOnlineAction('guess', { cardId: button.dataset.cardId }) : G.handleGuess(button.dataset.cardId);
-    if (!result.ok) {
-      if (result.code === 'CHALLENGE_PENDING') toast(I.t('challengePending'));
-      else toast(result.code || I.t('wrongPhase'));
-      return;
-    }
+    if (!button || button.disabled || viewMode !== 'operative' || candidateConfirmBusy) return;
     const state = G.getState();
-    if (state.status === 'ended') toast(state.endReason === 'ASSASSIN' ? I.t('assassinHit') : I.t('allAgentsFound'));
-    else if (state.currentTeam !== teamBefore) toast(I.t('turnEnded'));
-    else toast(I.t('guessedOwn'));
+    const card = state.board.find((item) => item.id === button.dataset.cardId);
+    if (!card || card.revealed) return;
+    const wasSelected = candidateIds.has(card.id);
+    if (wasSelected) candidateIds.delete(card.id); else candidateIds.add(card.id);
+    logCandidateEvent(wasSelected ? 'CANDIDATE_REMOVED' : 'CANDIDATE_ADDED', {
+      team: state.currentTeam, cardId: card.id, wordId: card.wordId, ar: card.ar, en: card.en,
+      clue: state.currentClue ? U.deepClone(state.currentClue) : null
+    });
+    if (CN.Effects) CN.Effects.sound(wasSelected ? 'deselect' : 'select');
+    renderGame(state);
+  }
+
+  async function confirmCandidate(cardId) {
+    if (candidateConfirmBusy) return;
+    const before = G.getState();
+    const card = before.board.find((item) => item.id === cardId);
+    if (!card || card.revealed || !candidateIds.has(cardId)) return;
+    const teamBefore = before.currentTeam;
+    candidateConfirmBusy = true;
+    candidateIds.clear();
+    renderGame(before);
+    logCandidateEvent('GUESS_CONFIRMED', { team: teamBefore, cardId: card.id, wordId: card.wordId, ar: card.ar, en: card.en, clue: before.currentClue ? U.deepClone(before.currentClue) : null });
+    if (CN.Effects) CN.Effects.sound('confirm');
+    try {
+      const result = isOnline() ? await requestOnlineAction('guess', { cardId }) : G.handleGuess(cardId);
+      if (!result.ok) {
+        if (result.code === 'CHALLENGE_PENDING') toast(I.t('challengePending'));
+        else toast(result.code || I.t('wrongPhase'));
+        return;
+      }
+      const state = G.getState();
+      if (state.status === 'ended') toast(state.endReason === 'ASSASSIN' ? I.t('assassinHit') : I.t('allAgentsFound'));
+      else if (state.currentTeam !== teamBefore) toast(I.t('turnEnded'));
+      else toast(I.t('guessedOwn'));
+    } finally {
+      candidateConfirmBusy = false;
+      render(G.getState());
+    }
+  }
+
+  function handleCandidatePanelClick(event) {
+    const confirm = event.target.closest('[data-confirm-card-id]');
+    if (confirm) confirmCandidate(confirm.dataset.confirmCardId);
+  }
+
+  function clearCandidates() {
+    if (!candidateIds.size || candidateConfirmBusy) return;
+    const state = G.getState();
+    candidateIds.clear();
+    logCandidateEvent('CANDIDATES_CLEARED', { team: state.currentTeam, clue: state.currentClue ? U.deepClone(state.currentClue) : null });
+    renderGame(state);
   }
 
   async function endTurn() {
+    candidateIds.clear();
     const result = isOnline() ? await requestOnlineAction('endTurn', {}) : G.endTurn('VOLUNTARY');
     if (!result.ok) {
       toast(result.code === 'MUST_GUESS_FIRST' ? I.t('mustGuessFirst') : (result.code || I.t('wrongPhase')));
@@ -446,6 +590,7 @@
   function completeHold() {
     cancelHold(false);
     if (!canUseSpymasterView()) { toast('Spymaster access is not available on this device.'); return; }
+    candidateIds.clear();
     viewMode = 'spymaster';
     if (refs.privacyDialog.open) refs.privacyDialog.close();
     render(G.getState());
@@ -657,7 +802,7 @@
       return;
     }
     const result = G.resetGame({ wordPool: activeWordPool(), customWords });
-    if (result.ok) { viewMode = 'operative'; render(G.getState()); }
+    if (result.ok) { candidateIds.clear(); candidateContextKey = ''; viewMode = 'operative'; render(G.getState()); }
   }
 
   async function newGame() {
@@ -668,6 +813,7 @@
       return;
     }
     G.newGameToSetup();
+    candidateIds.clear(); candidateContextKey = '';
     viewMode = 'operative';
     render(G.getState());
   }
@@ -688,6 +834,8 @@
     refs.revertWordsBtn.addEventListener('click', revertWords);
 
     refs.board.addEventListener('click', handleBoardClick);
+    refs.candidateList.addEventListener('click', handleCandidatePanelClick);
+    refs.clearCandidatesBtn.addEventListener('click', clearCandidates);
     refs.clueForm.addEventListener('submit', submitClue);
     refs.clueModeSelect.addEventListener('change', changeClueMode);
     refs.endTurnBtn.addEventListener('click', endTurn);

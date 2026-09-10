@@ -201,4 +201,36 @@
     H.equal(G.getState().maxGuesses, Infinity);
   });
 
+  H.test('spectators do not count toward the four active players', () => {
+    const players = [
+      { id:'p1',name:'A',team:'red',role:'spymaster' },
+      { id:'p2',name:'B',team:'red',role:'operative' },
+      { id:'p3',name:'C',team:'blue',role:'spymaster' },
+      { id:'p4',name:'D',team:'blue',role:'operative' },
+      { id:'p5',name:'E',team:'spectator',role:'spectator' }
+    ];
+    const result = G.validatePlayers(players);
+    H.ok(result.valid); H.equal(result.players.filter((p) => p.role === 'spectator').length, 1);
+  });
+
+  H.test('team randomisation preserves spectators outside red and blue', () => {
+    const players = [
+      { id:'p1',team:'red',role:'operative' }, { id:'p2',team:'red',role:'operative' },
+      { id:'p3',team:'blue',role:'operative' }, { id:'p4',team:'blue',role:'operative' },
+      { id:'p5',team:'spectator',role:'spectator' }
+    ];
+    const next = G.randomiseTeams(players);
+    const spectator = next.find((p) => p.id === 'p5');
+    H.equal(spectator.team, 'spectator'); H.equal(spectator.role, 'spectator');
+  });
+
+  H.test('card reveal log includes clue, bilingual word, outcome and remaining counts', () => {
+    const state = baseState();
+    G.__test.replaceState(state);
+    G.handleGuess('r1');
+    const entry = G.getState().logs.find((item) => item.type === 'CARD_REVEALED');
+    H.ok(entry); H.equal(entry.payload.en, 'RedOne'); H.equal(entry.payload.ar, 'أحمر1');
+    H.equal(entry.payload.outcome, 'correct'); H.equal(entry.payload.clue.text, 'test'); H.equal(entry.payload.remaining.red, 1);
+  });
+
 })();

@@ -21,6 +21,7 @@
     });
 
     CN.UI.init();
+    if (CN.Effects && CN.Effects.init) CN.Effects.init();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });

@@ -10,6 +10,7 @@
   <script defer src="js/i18n.js"></script>
   <script defer src="js/utils.js"></script>
   <script defer src="js/game.js"></script>
+  <script defer src="js/effects.js"></script>
   <script defer src="js/ui.js"></script>
   <script defer src="js/app.js"></script>
 </head>
@@ -19,13 +20,19 @@
       <h1 data-i18n="appTitle">Codenames — عربي / English</h1>
       <p class="subtitle">Local + Online Multiplayer · عربي / English</p>
     </div>
-    <label class="compact-field language-field">
-      <span data-i18n="uiLanguage">لغة الواجهة</span>
-      <select id="uiLanguageGlobal">
-        <option value="ar">العربية</option>
-        <option value="en">English</option>
-      </select>
-    </label>
+    <div class="header-controls">
+      <label class="compact-field language-field">
+        <span data-i18n="uiLanguage">لغة الواجهة</span>
+        <select id="uiLanguageGlobal">
+          <option value="ar">العربية</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <div class="sound-control" aria-label="Sound controls">
+        <button id="soundToggleBtn" class="button ghost sound-toggle" type="button">🔊</button>
+        <input id="soundVolume" type="range" min="0" max="1" step="0.05" value="0.55" aria-label="Sound volume">
+      </div>
+    </div>
   </header>
 
   <main class="page-shell">
@@ -211,6 +218,21 @@
         </div>
       </div>
 
+      <section id="teamRosterPanel" class="team-roster panel" aria-label="Team rosters">
+        <div class="roster-column roster-red">
+          <h3>🔴 <span data-i18n="redTeam">الفريق الأحمر</span></h3>
+          <div id="redRoster" class="roster-list"></div>
+        </div>
+        <div class="roster-column roster-blue">
+          <h3>🔵 <span data-i18n="blueTeam">الفريق الأزرق</span></h3>
+          <div id="blueRoster" class="roster-list"></div>
+        </div>
+        <div class="roster-column roster-spectators">
+          <h3>👁️ <span data-i18n="spectators">المشاهدون</span></h3>
+          <div id="spectatorRoster" class="roster-list"></div>
+        </div>
+      </section>
+
       <div class="game-layout">
         <section class="board-panel panel" aria-label="Game board">
           <div class="board-toolbar">
@@ -260,6 +282,17 @@
             <p class="small muted" data-i18n="choosePenaltyCard">اختر عميلاً غير مكشوف من فريقك</p>
             <div id="penaltyCandidates" class="penalty-list"></div>
             <button id="skipPenaltyBtn" class="button secondary" type="button" data-i18n="skipPenalty">تخطي العقوبة</button>
+          </section>
+
+          <section id="candidatePanel" class="panel candidate-panel" hidden>
+            <div class="section-heading compact-heading">
+              <div>
+                <span class="eyebrow" data-i18n="candidateCards">البطاقات المحتملة</span>
+                <p class="small muted" data-i18n="candidateHelp">حدد أكثر من بطاقة ثم ثبّت بطاقة واحدة كتخمين نهائي.</p>
+              </div>
+              <button id="clearCandidatesBtn" class="button ghost small-button" type="button" data-i18n="clearCandidates">مسح التحديد</button>
+            </div>
+            <div id="candidateList" class="candidate-list"></div>
           </section>
 
           <section class="panel action-panel">

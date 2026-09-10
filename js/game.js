@@ -21,7 +21,7 @@
     return {
       status: 'setup',
       players: [],
-      teams: { red: { spymasterId: null, operativeIds: [] }, blue: { spymasterId: null, operativeIds: [] } },
+      teams: { red: { spymasterId: null, operativeIds: [] }, blue: { spymasterId: null, operativeIds: [] }, spectatorIds: [] },
       startingTeam: null,
       currentTeam: null,
       board: [],
@@ -215,8 +215,9 @@
   }
 
   function buildTeams(players) {
-    const teams = { red: { spymasterId: null, operativeIds: [] }, blue: { spymasterId: null, operativeIds: [] } };
+    const teams = { red: { spymasterId: null, operativeIds: [] }, blue: { spymasterId: null, operativeIds: [] }, spectatorIds: [] };
     players.forEach((p) => {
+      if (p.team === 'spectator' || p.role === 'spectator') { teams.spectatorIds.push(p.id); return; }
       if (!teams[p.team]) return;
       if (p.role === 'spymaster') teams[p.team].spymasterId = p.id;
       else teams[p.team].operativeIds.push(p.id);
@@ -226,21 +227,26 @@
 
   function validatePlayers(players) {
     const errors = [];
-    if (!Array.isArray(players) || players.length < 4) errors.push('MIN_4_PLAYERS');
-    const clean = (players || []).map((p, i) => ({
-      id: p.id || `player-${i + 1}`,
-      name: U.normalizeWhitespace(p.name || `Player ${i + 1}`),
-      team: p.team,
-      role: p.role
-    }));
+    const clean = (players || []).map((p, i) => {
+      const spectator = p && (p.team === 'spectator' || p.role === 'spectator');
+      return {
+        id: p.id || `player-${i + 1}`,
+        name: U.normalizeWhitespace(p.name || `Player ${i + 1}`),
+        team: spectator ? 'spectator' : p.team,
+        role: spectator ? 'spectator' : p.role
+      };
+    });
+    const active = clean.filter((p) => p.team === 'red' || p.team === 'blue');
+    if (!Array.isArray(players) || active.length < 4) errors.push('MIN_4_ACTIVE_PLAYERS');
     ['red', 'blue'].forEach((team) => {
-      const members = clean.filter((p) => p.team === team);
+      const members = active.filter((p) => p.team === team);
       if (members.length < 2) errors.push(`${team.toUpperCase()}_MIN_2`);
       if (members.filter((p) => p.role === 'spymaster').length !== 1) errors.push(`${team.toUpperCase()}_ONE_SPYMASTER`);
-      if (members.filter((p) => p.role !== 'spymaster').length < 1) errors.push(`${team.toUpperCase()}_NEED_OPERATIVE`);
+      if (members.filter((p) => p.role === 'operative').length < 1) errors.push(`${team.toUpperCase()}_NEED_OPERATIVE`);
     });
-    if (clean.some((p) => !['red', 'blue'].includes(p.team))) errors.push('INVALID_TEAM');
-    if (clean.some((p) => !['spymaster', 'operative'].includes(p.role))) errors.push('INVALID_ROLE');
+    if (clean.some((p) => !['red', 'blue', 'spectator'].includes(p.team))) errors.push('INVALID_TEAM');
+    if (clean.some((p) => !['spymaster', 'operative', 'spectator'].includes(p.role))) errors.push('INVALID_ROLE');
+    if (clean.some((p) => (p.team === 'spectator') !== (p.role === 'spectator'))) errors.push('SPECTATOR_ROLE_MISMATCH');
     return { valid: errors.length === 0, players: clean, errors };
   }
 
@@ -263,7 +269,8 @@
     gameState.status = 'clue';
     gameState.createdAt = nowISO();
     gameState.roundId = `round-${Date.now()}-${U.randomInt(1000000)}`;
-    logEvent('GAME_STARTED', { startingTeam: gameState.startingTeam, players: gameState.players.length, wordSource: settings.wordSource });
+    logEvent('GAME_STARTED', { startingTeam: gameState.startingTeam, players: gameState.players.length, activePlayers: gameState.players.filter((p) => p.team === 'red' || p.team === 'blue').length, spectators: gameState.players.filter((p) => p.role === 'spectator').length, wordSource: settings.wordSource });
+    logEvent('TURN_STARTED', { team: gameState.startingTeam, initial: true });
     notify();
     return { ok: true, state: gameState };
   }
@@ -420,7 +427,8 @@
       gameState.remaining[card.role] = Math.max(0, gameState.remaining[card.role] - 1);
     }
 
-    logEvent('CARD_REVEALED', { cardId: card.id, wordId: card.wordId, role: card.role, guessingTeam, source: source || 'guess' });
+    const outcome = card.role === 'assassin' ? 'assassin' : card.role === 'neutral' ? 'neutral' : (guessingTeam && card.role === guessingTeam ? 'correct' : (guessingTeam ? 'opponent' : 'penalty'));
+    logEvent('CARD_REVEALED', { cardId: card.id, wordId: card.wordId, ar: card.ar, en: card.en, role: card.role, outcome, guessingTeam, source: source || 'guess', clue: gameState.currentClue ? U.deepClone(gameState.currentClue) : null, remaining: U.deepClone(gameState.remaining) });
 
     if (card.role === 'assassin') {
       const loser = guessingTeam || gameState.currentTeam;
@@ -444,6 +452,8 @@
     if (gameState.status === 'guessing' && gameState.guessesMade < 1 && !opts.force) return { ok: false, code: 'MUST_GUESS_FIRST' };
     const endingTeam = gameState.currentTeam;
     const nextTeam = U.oppositeTeam(endingTeam);
+    const endingClue = gameState.currentClue ? U.deepClone(gameState.currentClue) : null;
+    const endingGuesses = gameState.guessesMade;
     gameState.currentClue = null;
     gameState.guessesMade = 0;
     gameState.maxGuesses = 0;
@@ -451,7 +461,8 @@
     gameState.invalidCluePenalty = null;
     gameState.currentTeam = nextTeam;
     gameState.status = 'clue';
-    logEvent('TURN_ENDED', { team: endingTeam, nextTeam, reason: reason || 'VOLUNTARY' });
+    logEvent('TURN_ENDED', { team: endingTeam, nextTeam, reason: reason || 'VOLUNTARY', clue: endingClue, guessesMade: endingGuesses });
+    logEvent('TURN_STARTED', { team: nextTeam, previousTeam: endingTeam });
     notify();
     return { ok: true, nextTeam };
   }
@@ -616,13 +627,18 @@
   }
 
   function randomiseTeams(players) {
-    const shuffled = U.shuffle(players.map((p) => Object.assign({}, p)));
-    shuffled.forEach((p, index) => { p.team = index % 2 === 0 ? 'red' : 'blue'; p.role = 'operative'; });
-    return shuffled;
+    const source = players.map((p) => Object.assign({}, p));
+    const spectators = source.filter((p) => p.team === 'spectator' || p.role === 'spectator').map((p) => Object.assign(p, { team: 'spectator', role: 'spectator' }));
+    const active = U.shuffle(source.filter((p) => p.team !== 'spectator' && p.role !== 'spectator'));
+    active.forEach((p, index) => { p.team = index % 2 === 0 ? 'red' : 'blue'; p.role = 'operative'; });
+    return active.concat(spectators);
   }
 
   function randomiseSpymasters(players) {
-    const next = players.map((p) => Object.assign({}, p, { role: 'operative' }));
+    const next = players.map((p) => {
+      const spectator = p.team === 'spectator' || p.role === 'spectator';
+      return Object.assign({}, p, spectator ? { team: 'spectator', role: 'spectator' } : { role: 'operative' });
+    });
     ['red', 'blue'].forEach((team) => {
       const members = next.filter((p) => p.team === team);
       if (members.length) members[U.randomInt(members.length)].role = 'spymaster';

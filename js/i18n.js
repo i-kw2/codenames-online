@@ -7,7 +7,7 @@
       appTitle: 'Codenames — عربي / English', subtitle: 'نسخة محلية للطور الكلاسيكي',
       setup: 'إعداد اللعبة', addPlayer: 'إضافة لاعب', randomTeams: 'توزيع الفرق عشوائياً', randomSpymasters: 'اختيار القادة عشوائياً',
       startGame: 'ابدأ اللعبة', playerName: 'اسم اللاعب', team: 'الفريق', role: 'الدور', red: 'الأحمر', blue: 'الأزرق',
-      spymaster: 'قائد التجسس', operative: 'لاعب ميداني', remove: 'حذف', settings: 'الإعدادات', uiLanguage: 'لغة الواجهة',
+      spymaster: 'قائد التجسس', operative: 'لاعب ميداني', spectator: 'مشاهد', spectators: 'المشاهدون', redTeam: 'الفريق الأحمر', blueTeam: 'الفريق الأزرق', remove: 'حذف', settings: 'الإعدادات', uiLanguage: 'لغة الواجهة',
       cardLanguage: 'لغة البطاقات', both: 'العربية + الإنجليزية', arabic: 'العربية', english: 'English', strictClues: 'تلميحات صارمة',
       expertRules: 'قواعد الخبراء (0 / Unlimited)', wordList: 'قائمة الكلمات', defaultWords: 'القائمة الافتراضية', customWords: 'قائمة مخصصة',
       manageWords: 'إدارة الكلمات', currentTeam: 'الدور الحالي', startingTeam: 'الفريق البادئ', remaining: 'المتبقي',
@@ -31,13 +31,13 @@
       readyToGuess: 'التلميح معتمد. أعطِ الجهاز للاعبين وابدأوا التخمين.', challengePending: 'يوجد اعتراض على التلميح.', noErrors: 'لا توجد أخطاء مسجلة.', noEvents: 'لا توجد أحداث بعد.',
       copied: 'تم النسخ.', copyFailed: 'تعذر النسخ تلقائياً.', customSummary: 'نتيجة الاستيراد', formatAuto: 'تلقائي',
       clueZeroHint: 'المعنى: تجنبوا الكلمات المرتبطة بالتلميح، والتخمينات غير محدودة.', clueUnlimitedHint: 'التخمينات غير محدودة ما دامت صحيحة.',
-      rolesVisibleWarning: 'المفتاح السري ظاهر الآن. أخفه قبل إعادة الجهاز للاعبين.'
+      rolesVisibleWarning: 'المفتاح السري ظاهر الآن. أخفه قبل إعادة الجهاز للاعبين.', candidateCards: 'البطاقات المحتملة', candidateHelp: 'حدد أكثر من بطاقة ثم ثبّت بطاقة واحدة كتخمين نهائي.', clearCandidates: 'مسح التحديد', confirmGuess: 'اعتماد التخمين', picked: 'تم اختيارها', soundOn: 'الصوت يعمل', soundOff: 'الصوت مكتوم'
     },
     en: {
       appTitle: 'Codenames — Arabic / English', subtitle: 'Local classic-mode implementation',
       setup: 'Game Setup', addPlayer: 'Add Player', randomTeams: 'Randomise Teams', randomSpymasters: 'Randomise Spymasters',
       startGame: 'Start Game', playerName: 'Player name', team: 'Team', role: 'Role', red: 'Red', blue: 'Blue',
-      spymaster: 'Spymaster', operative: 'Operative', remove: 'Remove', settings: 'Settings', uiLanguage: 'UI language',
+      spymaster: 'Spymaster', operative: 'Operative', spectator: 'Spectator', spectators: 'Spectators', redTeam: 'Red Team', blueTeam: 'Blue Team', remove: 'Remove', settings: 'Settings', uiLanguage: 'UI language',
       cardLanguage: 'Card language', both: 'Arabic + English', arabic: 'Arabic', english: 'English', strictClues: 'Strict clue mode',
       expertRules: 'Expert rules (0 / Unlimited)', wordList: 'Word list', defaultWords: 'Built-in words', customWords: 'Custom words',
       manageWords: 'Manage words', currentTeam: 'Current team', startingTeam: 'Starting team', remaining: 'Remaining',
@@ -61,7 +61,7 @@
       readyToGuess: 'Clue accepted. Return the device to the operatives and start guessing.', challengePending: 'A clue challenge is pending.', noErrors: 'No errors logged.', noEvents: 'No events yet.',
       copied: 'Copied.', copyFailed: 'Automatic copy failed.', customSummary: 'Import result', formatAuto: 'Auto',
       clueZeroHint: 'Meaning: avoid words related to this clue; guesses are unlimited.', clueUnlimitedHint: 'Guesses are unlimited while guesses remain correct.',
-      rolesVisibleWarning: 'The secret key is visible. Hide it before returning the device to operatives.'
+      rolesVisibleWarning: 'The secret key is visible. Hide it before returning the device to operatives.', candidateCards: 'Cards under consideration', candidateHelp: 'Mark several cards, then confirm one as the final guess.', clearCandidates: 'Clear selection', confirmGuess: 'Confirm guess', picked: 'Picked', soundOn: 'Sound on', soundOff: 'Sound muted'
     }
   };
 

@@ -119,3 +119,16 @@ The core tests include classic rule behavior plus online serialization checks th
 ## Firebase SDK
 
 The online module uses Firebase's browser CDN modular SDK and does not require npm. An internet connection is required for Online mode because Firebase is a cloud service; Local mode still uses the existing vanilla HTML/CSS/JS engine.
+
+
+## V3 Enhanced additions
+
+- Event animations for game start, turn changes, reveals, assassin and winner states.
+- Generated Web Audio sound effects with mute and volume controls.
+- Visible Red / Blue / Spectator roster during the game.
+- Candidate-card workflow: mark several possibilities, then confirm one final guess.
+- Expanded game logs with clue context, bilingual card text, reveal outcome and remaining counts.
+- Spectator role supported in local and online lobbies without counting toward the four active players.
+- Responsive layout improvements for phone, tablet and desktop.
+- Spymaster view keeps picked words visible with a picked badge; Operative view hides the used word.
+- Active-turn red/blue background tint with animated transition.

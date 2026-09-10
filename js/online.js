@@ -208,6 +208,7 @@ function renderHostControls() {
 function playerTeamLabel(team) {
   if (team === 'red') return '🔴 Red';
   if (team === 'blue') return '🔵 Blue';
+  if (team === 'spectator') return '👁️ Spectator';
   return '⚪ Unassigned';
 }
 
@@ -238,7 +239,7 @@ function renderLobbyPlayers() {
     if (runtime.isHost) {
       const team = document.createElement('select');
       team.dataset.action = 'team';
-      [['unassigned','Unassigned'],['red','Red'],['blue','Blue']].forEach(([value, label]) => {
+      [['unassigned','Unassigned'],['red','Red'],['blue','Blue'],['spectator','Spectator']].forEach(([value, label]) => {
         const option = document.createElement('option'); option.value = value; option.textContent = label; team.appendChild(option);
       });
       team.value = player.team || 'unassigned';
@@ -246,7 +247,7 @@ function renderLobbyPlayers() {
 
       const role = document.createElement('select');
       role.dataset.action = 'role';
-      [['operative','Operative'],['spymaster','Spymaster']].forEach(([value, label]) => {
+      [['operative','Operative'],['spymaster','Spymaster'],['spectator','Spectator']].forEach(([value, label]) => {
         const option = document.createElement('option'); option.value = value; option.textContent = label; role.appendChild(option);
       });
       role.value = player.role || 'operative';
@@ -595,10 +596,16 @@ async function updatePlayerAssignment(uid, field, value) {
   if (!player) return;
   if (field === 'team') {
     await set(roomRef(`players/${uid}/team`), value);
-    if (value === 'unassigned') await set(roomRef(`players/${uid}/role`), 'operative');
+    if (value === 'spectator') await set(roomRef(`players/${uid}/role`), 'spectator');
+    else if (player.role === 'spectator' || value === 'unassigned') await set(roomRef(`players/${uid}/role`), 'operative');
     return;
   }
   if (field === 'role') {
+    if (value === 'spectator') {
+      await update(roomRef(), { [`players/${uid}/team`]: 'spectator', [`players/${uid}/role`]: 'spectator' });
+      return;
+    }
+    if (player.team === 'spectator') return;
     if (value === 'spymaster') {
       if (player.team === 'unassigned') return;
       const updates = {};
@@ -624,7 +631,8 @@ async function kickPlayer(uid) {
 async function randomizeTeams() {
   if (!runtime.isHost) return;
   const players = Object.values(runtime.players).map((p) => ({ ...p, id: p.uid }));
-  if (players.length < 4) { setMessage(dom.lobbyValidationMessage, 'Need at least 4 players.'); return; }
+  const activeCount = players.filter((p) => p.team !== 'spectator' && p.role !== 'spectator').length;
+  if (activeCount < 4) { setMessage(dom.lobbyValidationMessage, 'Need at least 4 active players (spectators do not count).'); return; }
   let next = CN.Game.randomiseTeams(players);
   next = CN.Game.randomiseSpymasters(next);
   const changes = {};
@@ -639,8 +647,9 @@ async function randomizeTeams() {
 async function randomizeSpymasters() {
   if (!runtime.isHost) return;
   const players = Object.values(runtime.players).map((p) => ({ ...p, id: p.uid }));
-  if (players.some((p) => !['red', 'blue'].includes(p.team))) {
-    setMessage(dom.lobbyValidationMessage, 'Assign every player to Red or Blue first.');
+  const active = players.filter((p) => p.team !== 'spectator' && p.role !== 'spectator');
+  if (active.some((p) => !['red', 'blue'].includes(p.team))) {
+    setMessage(dom.lobbyValidationMessage, 'Assign every active player to Red or Blue first.');
     return;
   }
   const next = CN.Game.randomiseSpymasters(players);
@@ -714,7 +723,7 @@ function authorizeAction(action) {
     return action.uid === runtime.uid && runtime.isHost ? { ok: true, player } : { ok: false, code: 'HOST_ONLY' };
   }
   if (runtime.roomStatus !== 'playing') return { ok: false, code: 'ROOM_NOT_PLAYING' };
-  if (action.type === 'guess' || action.type === 'endTurn') {
+  if (action.type === 'guess' || action.type === 'endTurn' || action.type === 'candidateLog') {
     if (player.role !== 'operative' || player.team !== state.currentTeam) return { ok: false, code: 'NOT_CURRENT_OPERATIVE' };
   }
   if (action.type === 'submitClue') {
@@ -770,6 +779,7 @@ async function processOneAction(actionId, action) {
       const payload = action.payload || {};
       switch (action.type) {
         case 'guess': result = CN.Game.handleGuess(payload.cardId); break;
+        case 'candidateLog': CN.Game.logEvent(payload.eventType || 'CANDIDATE_EVENT', Object.assign({ playerId: action.uid, team: authz.player.team }, payload.data || {})); result = { ok: true }; break;
         case 'submitClue': result = CN.Game.submitClue(payload); break;
         case 'endTurn': result = CN.Game.endTurn('VOLUNTARY'); break;
         case 'challengeClue': result = CN.Game.challengeClue(); break;
