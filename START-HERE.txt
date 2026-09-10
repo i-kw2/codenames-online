@@ -1,0 +1,7 @@
+CODENAMES BILINGUAL V7
+
+1) Open index.html for local play, or use VS Code Live Server.
+2) For online rooms, configure js/firebase-config.js and Firebase rules as described in SETUP-ONLINE.md.
+3) Run tests by opening tests/test-runner.html.
+
+The current build includes animations, sounds, team rosters, spectators, richer logs, responsive UI, picked-card handling and red/blue turn backgrounds. V7 removes the candidate-card workflow: Operatives now click a card to submit the final guess directly.
