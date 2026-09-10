@@ -1,0 +1,7 @@
+CODENAMES BILINGUAL V3 ENHANCED
+
+1) Open index.html for local play, or use VS Code Live Server.
+2) For online rooms, configure js/firebase-config.js and Firebase rules as described in SETUP-ONLINE.md.
+3) Run tests by opening tests/test-runner.html.
+
+V3 adds animations, sounds, team rosters, spectators, candidate-card confirmation, richer logs, responsive UI, picked-card handling and red/blue turn backgrounds.
