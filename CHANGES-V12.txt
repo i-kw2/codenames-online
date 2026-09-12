@@ -1,9 +1,0 @@
-Codenames Bilingual V12
-=======================
-
-Changes in V12:
-- Removed the V11 colour-overlay / blend-mode tint effect from revealed images.
-- Cards now use a clear frame style: white border before reveal, then a role-coloured border after reveal.
-- Reveal images still use only the 25 original PNG files from Normal.zip.
-- Spymaster still sees the reveal image after a card is chosen, same as operative view.
-- Kept gameplay, word logic, Firebase/online flow, and layout behaviour unchanged.
