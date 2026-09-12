@@ -1,0 +1,15 @@
+V14 DEPLOY NOTE
+===============
+
+1. Upload all V14 files to your hosting location.
+2. In Firebase Realtime Database -> Rules, replace the existing rules with the V14 firebase-rules.json and Publish.
+3. Keep Anonymous Authentication enabled.
+4. Keep your existing js/firebase-config.js values.
+5. Open the deployed site in a fresh browser tab, create a new room, and test with at least 4 devices/tabs.
+
+Why the rules changed:
+- New visitors now enter as Spectators.
+- A player may change only their own team/role while teams are unlocked.
+- Nickname/avatar changes remain personal.
+- Only the Host can lock/reset/randomize teams and start the match.
+- Spectators still cannot read the secret key; only the Host and Spymasters can access the secret role map.
