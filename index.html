@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Bilingual Arabic/English Codenames-style game with local and Firebase online multiplayer rooms.">
+  <title>Codenames — عربي / English</title>
+  <link rel="stylesheet" href="css/styles.css?v=14.0">
+  <script defer src="js/words.js?v=14.0"></script>
+  <script defer src="js/i18n.js?v=14.0"></script>
+  <script defer src="js/utils.js?v=14.0"></script>
+  <script defer src="js/game.js?v=14.0"></script>
+  <script defer src="js/effects.js?v=14.0"></script>
+  <script defer src="js/ui.js?v=14.0"></script>
+  <script defer src="js/app.js?v=14.0"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <h1 data-i18n="appTitle">Codenames — عربي / English</h1>
+      <p class="subtitle">Local + Online Multiplayer · عربي / English</p>
+    </div>
+    <div class="header-controls">
+      <label class="compact-field language-field">
+        <span data-i18n="uiLanguage">لغة الواجهة</span>
+        <select id="uiLanguageGlobal">
+          <option value="ar">العربية</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+      <div class="sound-control" aria-label="Sound controls">
+        <button id="soundToggleBtn" class="button ghost sound-toggle" type="button">🔊</button>
+        <input id="soundVolume" type="range" min="0" max="1" step="0.05" value="0.55" aria-label="Sound volume">
+      </div>
+    </div>
+  </header>
+
+  <main class="page-shell">
+
+    <section id="onlineHomeSection" class="panel online-home-panel">
+      <div class="section-heading">
+        <div>
+          <span class="eyebrow">ONLINE MULTIPLAYER V2 + V7 FEATURES</span>
+          <h2>العب مع ربعك برابط واحد</h2>
+          <p class="muted">Create a room, copy the invite link, and everyone joins the same live game.</p>
+        </div>
+        <span id="firebaseConnectionBadge" class="connection-badge offline">Firebase: checking…</span>
+      </div>
+
+      <div id="firebaseSetupWarning" class="message warning-message">
+        Firebase غير مربوط بعد. افتح ملف <strong>js/firebase-config.js</strong> والصق Firebase config أولاً. راجع <strong>SETUP-ONLINE.md</strong>.
+      </div>
+
+      <div class="online-entry-grid">
+        <section id="createRoomEntry" class="entry-card">
+          <h3>👑 Create Room</h3>
+          <label class="field">
+            <span>اسم الغرفة / Room name</span>
+            <input id="hostRoomNameInput" type="text" maxlength="30" placeholder="Friday Diwaniya" autocomplete="off">
+          </label>
+          <label class="field">
+            <span>اسمك / Your name</span>
+            <input id="hostNameInput" type="text" maxlength="30" placeholder="Khaled" autocomplete="name">
+          </label>
+          <button id="createRoomBtn" class="button primary large" type="button">Create Room</button>
+          <p class="small muted">أنت راح تكون الـHost وتتحكم ببدء اللعبة وتوزيع الفرق.</p>
+        </section>
+
+        <section id="joinRoomEntry" class="entry-card">
+          <h3 id="joinRoomTitle">🔗 Join Room</h3>
+          <p id="inviteJoinHelp" class="small muted" hidden>اكتب اسمك ثم اضغط انضمام / Enter your name, then join the room.</p>
+          <label class="field">
+            <span>اسمك / Your name</span>
+            <input id="joinNameInput" type="text" maxlength="30" placeholder="Player name" autocomplete="name">
+          </label>
+          <label id="joinRoomCodeField" class="field">
+            <span>Room Code</span>
+            <input id="joinRoomCodeInput" class="room-code-input" type="text" maxlength="8" placeholder="A7K92M" autocomplete="off" autocapitalize="characters">
+          </label>
+          <button id="joinRoomBtn" class="button secondary large" type="button">Join Room</button>
+        </section>
+      </div>
+
+      <div id="onlineHomeMessage" class="message error-message" role="alert" hidden></div>
+      <div class="local-divider"><span>OR / أو</span></div>
+      <button id="playLocalBtn" class="button ghost" type="button">Play locally on this device / العب محلي</button>
+    </section>
+
+    <nav id="roomTopNav" class="room-top-nav" hidden aria-label="Room navigation">
+      <button id="roomAdminBtn" class="room-nav-btn room-admin-btn" type="button">
+        <span>Admin</span><span aria-hidden="true">👥</span><strong id="roomNavPlayerCount">0</strong>
+      </button>
+      <div class="room-nav-actions">
+        <button id="roomNewsBtn" class="room-nav-btn" type="button">News</button>
+        <button id="roomRulesBtn" class="room-nav-btn" type="button">Rules</button>
+        <button id="roomSettingsBtn" class="room-nav-btn" type="button"><span aria-hidden="true">⚙</span> Settings</button>
+      </div>
+    </nav>
+
+    <section id="lobbySection" class="lobby-panel-v14" hidden aria-label="Room lobby">
+      <section class="spectators-zone" aria-labelledby="spectatorsTitle">
+        <h2 id="spectatorsTitle" class="spectators-title">Spectators <span aria-hidden="true">👁</span></h2>
+        <div id="spectatorLobbyList" class="spectator-lobby-list" aria-live="polite"></div>
+      </section>
+
+      <div class="quick-guide-anchor">
+        <span class="quick-guide-label">Show quick guide</span>
+        <button id="quickGuideBtn" class="quick-guide-button" type="button" aria-label="Show quick guide">?</button>
+      </div>
+
+      <section id="quickGuidePopover" class="quick-guide-popover" hidden aria-label="Quick guide">
+        <div class="quick-guide-badge"><span aria-hidden="true">?</span> QUICK GUIDE</div>
+        <button id="quickGuideCloseBtn" class="quick-guide-close" type="button" aria-label="Close quick guide">×</button>
+        <h3 id="quickGuideTitle">SET UP THE MATCH</h3>
+        <p id="quickGuideText"></p>
+        <div class="quick-guide-footer">
+          <div class="quick-guide-actions">
+            <button id="quickGuideGotItBtn" class="button v14-green" type="button">GOT IT</button>
+            <button id="quickGuideRulesBtn" class="button v14-outline" type="button">RULES</button>
+          </div>
+          <label class="quick-auto-toggle">Auto-show <input id="quickGuideAutoShow" type="checkbox"><span class="switch-track" aria-hidden="true"></span></label>
+        </div>
+      </section>
+
+      <div class="lobby-main-grid">
+        <section class="team-column team-blue" aria-labelledby="blueTeamTitle">
+          <h2 id="blueTeamTitle" class="team-header">BLUE TEAM</h2>
+          <article class="role-panel role-operative">
+            <h3>OPERATIVES</h3>
+            <div id="blueOperativesList" class="team-player-list" aria-live="polite"></div>
+            <button class="join-role-btn" type="button" data-join-team="blue" data-join-role="operative">JOIN TEAM</button>
+          </article>
+          <article class="role-panel role-spymaster">
+            <h3>SPYMASTER</h3>
+            <div id="blueSpymasterList" class="team-player-list" aria-live="polite"></div>
+            <button class="join-role-btn" type="button" data-join-team="blue" data-join-role="spymaster">JOIN TEAM</button>
+          </article>
+        </section>
+
+        <section class="game-settings-v14" aria-labelledby="gameSettingsTitle">
+          <h2 id="gameSettingsTitle">GAME SETTINGS</h2>
+          <div class="settings-mode-row" aria-label="Game mode">
+            <div class="mode-selected"><span class="mode-art" aria-hidden="true">🕵️</span><div><strong>CLASSIC</strong><small>4+ PLAYERS</small></div></div>
+          </div>
+          <button id="wordLanguageRow" class="settings-display-row" type="button">
+            <span class="settings-row-art" aria-hidden="true">EN</span>
+            <span><strong>WORD PACKS &amp; LANGUAGE</strong><small id="wordLanguageSummary">Arabic + English</small></span>
+          </button>
+          <div class="settings-display-row timer-display" aria-label="Timer off">
+            <span class="settings-row-art" aria-hidden="true">◷</span>
+            <span><strong>TIMER</strong><small>OFF</small></span>
+          </div>
+          <div class="lobby-admin-actions">
+            <button id="resetTeamsBtn" class="lobby-small-action" type="button">Reset teams</button>
+            <button id="onlineRandomTeamsBtn" class="lobby-small-action" type="button">Randomize teams</button>
+          </div>
+          <div id="lobbyValidationMessage" class="message error-message lobby-validation" hidden></div>
+        </section>
+
+        <section class="team-column team-red" aria-labelledby="redTeamTitle">
+          <h2 id="redTeamTitle" class="team-header">RED TEAM</h2>
+          <article class="role-panel role-operative">
+            <h3>OPERATIVES</h3>
+            <div id="redOperativesList" class="team-player-list" aria-live="polite"></div>
+            <button class="join-role-btn" type="button" data-join-team="red" data-join-role="operative">JOIN TEAM</button>
+          </article>
+          <article class="role-panel role-spymaster">
+            <h3>SPYMASTER</h3>
+            <div id="redSpymasterList" class="team-player-list" aria-live="polite"></div>
+            <button class="join-role-btn" type="button" data-join-team="red" data-join-role="spymaster">JOIN TEAM</button>
+          </article>
+        </section>
+      </div>
+
+      <div class="lobby-start-zone">
+        <button id="onlineStartGameBtn" class="lobby-start-btn" type="button">START GAME</button>
+      </div>
+
+      <!-- Compatibility elements retained for the existing realtime module. -->
+      <div class="v14-compat" aria-hidden="true">
+        <span id="lobbyRoomCode">—</span><span id="lobbyIdentity"></span><span id="lobbyPlayerCount">0</span><span id="hostOnlyHint"></span>
+        <button id="copyInviteBtn" type="button">Copy Invite Link</button><button id="leaveRoomBtn" type="button">Leave Room</button><code id="inviteLinkValue">—</code>
+        <div id="onlinePlayersList"></div>
+        <aside id="hostLobbyControls">
+          <select id="onlineCardLanguageSelect"><option value="both">العربية + English</option><option value="ar">العربية</option><option value="en">English</option></select>
+          <input id="onlineStrictCluesCheckbox" type="checkbox" checked><input id="onlineExpertRulesCheckbox" type="checkbox">
+          <button id="onlineRandomSpiesBtn" type="button">Randomize Spymasters</button>
+        </aside>
+      </div>
+    </section>
+    <section id="setupSection" class="panel setup-panel">
+      <div class="section-heading">
+        <div>
+          <h2 data-i18n="setup">إعداد اللعبة</h2>
+          <p class="muted">4+ players · 5×5 board · Red vs Blue</p>
+        </div>
+        <div class="button-row wrap">
+          <button id="addPlayerBtn" class="button secondary" type="button" data-i18n="addPlayer">إضافة لاعب</button>
+          <button id="randomTeamsBtn" class="button secondary" type="button" data-i18n="randomTeams">توزيع الفرق عشوائياً</button>
+          <button id="randomSpiesBtn" class="button secondary" type="button" data-i18n="randomSpymasters">اختيار القادة عشوائياً</button>
+        </div>
+      </div>
+
+      <div id="playersContainer" class="players-grid" aria-live="polite"></div>
+
+      <div class="settings-card">
+        <h3 data-i18n="settings">الإعدادات</h3>
+        <div class="settings-grid">
+          <label class="field">
+            <span data-i18n="cardLanguage">لغة البطاقات</span>
+            <select id="cardLanguageSelect">
+              <option value="both" data-i18n="both">العربية + الإنجليزية</option>
+              <option value="ar" data-i18n="arabic">العربية</option>
+              <option value="en" data-i18n="english">English</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span data-i18n="wordList">قائمة الكلمات</span>
+            <select id="wordSourceSelect">
+              <option value="default" data-i18n="defaultWords">القائمة الافتراضية</option>
+              <option value="custom" data-i18n="customWords" disabled>قائمة مخصصة</option>
+            </select>
+          </label>
+
+          <label class="check-field">
+            <input id="strictCluesCheckbox" type="checkbox" checked>
+            <span data-i18n="strictClues">تلميحات صارمة</span>
+          </label>
+
+          <label class="check-field">
+            <input id="expertRulesCheckbox" type="checkbox">
+            <span data-i18n="expertRules">قواعد الخبراء (0 / Unlimited)</span>
+          </label>
+        </div>
+        <div class="button-row">
+          <button id="manageWordsBtn" class="button ghost" type="button" data-i18n="manageWords">إدارة الكلمات</button>
+          <span id="customWordsStatus" class="muted small"></span>
+        </div>
+      </div>
+
+      <div id="setupMessage" class="message error-message" role="alert" hidden></div>
+      <div class="start-row">
+        <button id="startGameBtn" class="button primary large" type="button" data-i18n="startGame">ابدأ اللعبة</button>
+      </div>
+    </section>
+
+    <section id="gameSection" hidden>
+      <div id="onlineGameBar" class="panel online-game-bar" hidden>
+        <div><span class="eyebrow">ONLINE ROOM</span> <strong id="onlineGameRoomCode">—</strong></div>
+        <div id="onlineGameIdentity" class="small"></div>
+        <div id="onlineHostStatus" class="small muted"></div>
+        <button id="copyInviteInGameBtn" class="button ghost" type="button">Copy Invite</button>
+      </div>
+      <div class="game-status panel">
+        <div class="status-item">
+          <span class="eyebrow" data-i18n="currentTeam">الدور الحالي</span>
+          <strong id="currentTeamValue" class="team-chip"></strong>
+        </div>
+        <div class="status-item">
+          <span class="eyebrow" data-i18n="startingTeam">الفريق البادئ</span>
+          <strong id="startingTeamValue"></strong>
+        </div>
+        <div class="status-item score red-score">
+          <span data-i18n="red">الأحمر</span>
+          <strong id="redRemaining">0</strong>
+        </div>
+        <div class="status-item score blue-score">
+          <span data-i18n="blue">الأزرق</span>
+          <strong id="blueRemaining">0</strong>
+        </div>
+        <div class="status-item">
+          <span class="eyebrow">Status</span>
+          <strong id="phaseValue" class="phase-pill"></strong>
+        </div>
+      </div>
+
+      <section id="teamRosterPanel" class="team-roster panel" aria-label="Team rosters">
+        <div class="roster-column roster-red">
+          <h3>🔴 <span data-i18n="redTeam">الفريق الأحمر</span></h3>
+          <div id="redRoster" class="roster-list"></div>
+        </div>
+        <div class="roster-column roster-blue">
+          <h3>🔵 <span data-i18n="blueTeam">الفريق الأزرق</span></h3>
+          <div id="blueRoster" class="roster-list"></div>
+        </div>
+        <div class="roster-column roster-spectators">
+          <h3>👁️ <span data-i18n="spectators">المشاهدون</span></h3>
+          <div id="spectatorRoster" class="roster-list"></div>
+        </div>
+      </section>
+
+      <div class="game-layout">
+        <section class="board-panel panel" aria-label="Game board">
+          <div class="board-toolbar">
+            <span id="viewModeLabel" class="view-label"></span>
+            <span id="secretWarning" class="warning-text" hidden></span>
+          </div>
+          <div id="board" class="board" role="grid" aria-label="5 by 5 word board"></div>
+        </section>
+
+        <aside class="sidebar">
+          <section class="panel clue-summary">
+            <span class="eyebrow" data-i18n="currentClue">التلميح الحالي</span>
+            <div id="currentClueValue" class="clue-value">—</div>
+            <div id="guessCounter" class="muted"></div>
+            <div id="expertHint" class="hint" hidden></div>
+          </section>
+
+          <section id="spymasterControls" class="panel" hidden>
+            <h3 data-i18n="spymasterView">وضع القائد</h3>
+            <form id="clueForm" class="clue-form">
+              <label class="field">
+                <span data-i18n="clueWord">كلمة التلميح</span>
+                <input id="clueTextInput" type="text" maxlength="40" autocomplete="off">
+              </label>
+              <div class="two-columns">
+                <label class="field">
+                  <span>Mode</span>
+                  <select id="clueModeSelect">
+                    <option value="number" data-i18n="normal">رقم عادي</option>
+                    <option value="unlimited" data-i18n="unlimited">Unlimited</option>
+                    <option value="zero" data-i18n="zero">0 — تجنب</option>
+                  </select>
+                </label>
+                <label id="clueNumberField" class="field">
+                  <span data-i18n="clueNumber">الرقم</span>
+                  <input id="clueNumberInput" type="number" min="1" max="25" value="1">
+                </label>
+              </div>
+              <div id="clueValidationMessage" class="message error-message" hidden></div>
+              <button class="button primary" type="submit" data-i18n="submitClue">اعتماد التلميح</button>
+            </form>
+          </section>
+
+          <section id="penaltyPanel" class="panel" hidden>
+            <h3 data-i18n="penaltyTitle">عقوبة التلميح</h3>
+            <p data-i18n="penaltyText">يمكن لقائد الفريق المنافس كشف عميل واحد من فريقه، أو تخطي العقوبة.</p>
+            <p class="small muted" data-i18n="choosePenaltyCard">اختر عميلاً غير مكشوف من فريقك</p>
+            <div id="penaltyCandidates" class="penalty-list"></div>
+            <button id="skipPenaltyBtn" class="button secondary" type="button" data-i18n="skipPenalty">تخطي العقوبة</button>
+          </section>
+
+          <section class="panel action-panel">
+            <div class="button-stack">
+              <button id="spymasterKeyBtn" class="button dark" type="button" data-i18n="spymasterKey">مفتاح القائد</button>
+              <button id="hideSpymasterBtn" class="button secondary" type="button" data-i18n="releaseHide" hidden>العودة للاعبين</button>
+              <button id="challengeClueBtn" class="button warning" type="button" data-i18n="challengeClue" hidden>الاعتراض على التلميح</button>
+              <button id="endTurnBtn" class="button secondary" type="button" data-i18n="endTurn">إنهاء الدور</button>
+            </div>
+            <div id="actionMessage" class="message" role="status" hidden></div>
+          </section>
+
+          <section id="winnerPanel" class="panel winner-panel" hidden>
+            <span class="eyebrow" data-i18n="winner">الفائز</span>
+            <strong id="winnerValue"></strong>
+            <div id="winnerReason" class="muted"></div>
+          </section>
+        </aside>
+      </div>
+
+      <div class="panel footer-actions">
+        <button id="gameLogBtn" class="button ghost" type="button" data-i18n="gameLog">سجل اللعبة</button>
+        <button id="errorLogBtn" class="button ghost" type="button" data-i18n="errorLog">سجل الأخطاء</button>
+        <span class="spacer"></span>
+        <button id="resetGameBtn" class="button secondary" type="button" data-i18n="resetGame">إعادة الجولة</button>
+        <button id="newGameBtn" class="button danger" type="button" data-i18n="newGame">لعبة جديدة</button>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="roomSettingsDialog" class="v14-modal">
+    <div class="v14-modal-card settings-modal-card">
+      <button id="roomSettingsCloseBtn" class="v14-modal-close" type="button" aria-label="Close settings">×</button>
+      <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+        <button type="button" class="settings-tab active" data-settings-tab="admin" role="tab">Admin</button>
+        <button type="button" class="settings-tab" data-settings-tab="player" role="tab">Player</button>
+        <button type="button" class="settings-tab" data-settings-tab="preferences" role="tab">Preferences</button>
+        <button type="button" class="settings-tab" data-settings-tab="accessibility" role="tab">Accessibility</button>
+      </div>
+
+      <section class="settings-tab-panel active" data-settings-panel="admin">
+        <h2>Admin</h2>
+        <div class="settings-dark-section">
+          <h3>Players in the room</h3>
+          <div id="settingsPlayersList" class="settings-players-list"></div>
+        </div>
+        <label class="settings-line"><span><strong>Lock teams</strong><small>Prevent players from changing teams or roles.</small></span><input id="settingsLockTeams" type="checkbox"></label>
+        <div class="settings-action-row"><button id="settingsResetTeamsBtn" type="button">Reset teams</button><button id="settingsRandomTeamsBtn" type="button">Randomize teams</button></div>
+        <div class="settings-dark-section compact">
+          <label class="settings-field"><span>Card language</span><select id="settingsCardLanguage"><option value="both">Arabic + English</option><option value="ar">Arabic</option><option value="en">English</option></select></label>
+          <label class="settings-line compact-line"><span>Strict clues</span><input id="settingsStrictClues" type="checkbox"></label>
+          <label class="settings-line compact-line"><span>Expert rules (0 / Unlimited)</span><input id="settingsExpertRules" type="checkbox"></label>
+        </div>
+        <div class="settings-action-row"><button id="settingsCopyInviteBtn" type="button">Copy Invite Link</button></div>
+      </section>
+
+      <section class="settings-tab-panel" data-settings-panel="player">
+        <h2>Player</h2>
+        <div class="player-settings-top">
+          <div id="settingsAvatarPreview" class="settings-avatar-preview"></div>
+          <div class="player-settings-fields">
+            <label class="settings-field"><span>Nickname</span><input id="settingsNickname" type="text" maxlength="30"></label>
+            <label class="settings-field"><span>Avatar</span><select id="settingsAvatarSelect"></select></label>
+          </div>
+        </div>
+        <div class="settings-dark-section">
+          <h3>Assign role</h3>
+          <div class="assign-role-grid">
+            <button type="button" data-assign-team="blue" data-assign-role="operative">Blue operatives</button>
+            <button type="button" data-assign-team="red" data-assign-role="operative">Red operatives</button>
+            <button type="button" data-assign-team="blue" data-assign-role="spymaster">Blue spymaster</button>
+            <button type="button" data-assign-team="red" data-assign-role="spymaster">Red spymaster</button>
+            <button type="button" class="wide" data-assign-team="spectator" data-assign-role="spectator">Spectators</button>
+          </div>
+        </div>
+        <button id="settingsLeaveMatchBtn" class="settings-danger-btn" type="button">Leave match</button>
+      </section>
+
+      <section class="settings-tab-panel" data-settings-panel="preferences">
+        <h2>Preferences</h2>
+        <label class="settings-field"><span>Selected website language</span><select id="prefUiLanguage"><option value="en">English</option><option value="ar">العربية</option></select></label>
+        <div class="settings-choice-group"><span>Dark mode</span><div><button type="button" data-theme-choice="dark">On</button><button type="button" data-theme-choice="light">Off</button><button type="button" data-theme-choice="system">System</button></div></div>
+        <div class="settings-dark-section"><h3>Sounds</h3><label class="slider-line"><span>Music</span><input id="prefMusicVolume" type="range" min="0" max="100" value="0"></label><label class="slider-line"><span>Effects</span><input id="prefEffectsVolume" type="range" min="0" max="100" value="55"></label></div>
+        <label class="settings-line"><span>Always show card guess button</span><input id="prefAlwaysGuess" type="checkbox"></label>
+        <label class="settings-line"><span>Hide room URL in address bar</span><input id="prefHideRoomUrl" type="checkbox"></label>
+        <div class="settings-line"><span><strong>Show all hints again</strong><small>Reset the Quick Guide hints you have acknowledged.</small></span><button id="prefShowHintsBtn" type="button">Show</button></div>
+      </section>
+
+      <section class="settings-tab-panel" data-settings-panel="accessibility">
+        <h2>Accessibility</h2>
+        <div class="settings-choice-group"><span>Text size</span><div><button type="button" data-text-size="small">A</button><button type="button" class="text-medium" data-text-size="medium">A</button><button type="button" class="text-large" data-text-size="large">A</button></div></div>
+        <label class="settings-line"><span>Show colorblind assistive symbols on cards</span><input id="a11yColorblind" type="checkbox"></label>
+        <label class="settings-line"><span>Disable seasonal themes</span><input id="a11ySeasonal" type="checkbox"></label>
+        <div class="settings-dark-section reduced-motion-section"><h3>Reduced Motion</h3><div class="settings-choice-group inline"><span>Mode</span><div><button type="button" data-motion-mode="manual">Manual</button><button type="button" data-motion-mode="system">System</button></div></div><p id="motionSystemNote" class="small muted">Following system's reduce motion preference. Toggle any motion setting to switch to manual mode.</p><label class="settings-line compact-line"><span>Static background</span><input id="a11yStaticBackground" type="checkbox"></label><label class="settings-line compact-line"><span>Disable gameplay animations</span><input id="a11yDisableAnimations" type="checkbox"></label></div>
+      </section>
+    </div>
+  </dialog>
+
+  <dialog id="rulesDialogV14" class="v14-modal">
+    <div class="v14-modal-card rules-v14-card">
+      <button id="rulesCloseBtnV14" class="v14-modal-close" type="button" aria-label="Close rules">×</button>
+      <h2>CODENAMES — CLASSIC RULES</h2>
+      <div class="rules-v14-content">
+        <section><h3>Teams &amp; roles</h3><p>Two teams compete. Each team has one Spymaster and one or more Operatives. The Spymasters know the secret identities of the 25 cards.</p></section>
+        <section><h3>Clues</h3><p>The active Spymaster gives one word and one number. The number indicates how many board words are connected to that clue.</p></section>
+        <section><h3>Guessing</h3><p>For a clue numbered <em>n</em>, the team may make up to <strong>n + 1</strong> guesses while its guesses remain correct. A team may stop early after making at least one guess.</p></section>
+        <section><h3>Wrong cards</h3><p>A Neutral card ends the turn. An opponent card is revealed for the opponent and ends the turn. The Assassin ends the game immediately and the guessing team loses.</p></section>
+        <section><h3>Winning</h3><p>A team wins immediately when all of its agents have been revealed, even if the opponent reveals the last one by mistake.</p></section>
+        <section><h3>Clue legality</h3><p>Clues must relate to meaning, not board position or spelling tricks, and cannot be a visible board word or a prohibited form of one.</p></section>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="newsDialogV14" class="v14-modal">
+    <div class="v14-modal-card news-v14-card">
+      <button id="newsCloseBtnV14" class="v14-modal-close" type="button" aria-label="Close news">×</button>
+      <h2>News</h2><p><strong>V14</strong> introduces the redesigned room lobby, Spectators thumbnails, team role panels, Settings tabs, contextual Quick Guide, team locking, and accessibility preferences while keeping the V13 game engine intact.</p>
+    </div>
+  </dialog>
+
+  <dialog id="privacyDialog" class="modal privacy-modal">
+    <form method="dialog" class="modal-card">
+      <button class="icon-close" value="cancel" aria-label="Close">×</button>
+      <h2 data-i18n="passToSpymasters">مرّر الجهاز إلى قادة التجسس</h2>
+      <p class="muted">The secret key is only hidden by the interface on this shared device.</p>
+      <button id="holdRevealBtn" class="hold-button" type="button">
+        <span data-i18n="holdReveal">اضغط مطولاً لإظهار المفتاح</span>
+        <span id="holdProgress" class="hold-progress" aria-hidden="true"></span>
+      </button>
+    </form>
+  </dialog>
+
+  <dialog id="challengeDialog" class="modal">
+    <div class="modal-card">
+      <h2 data-i18n="challengeClue">الاعتراض على التلميح</h2>
+      <p id="challengeClueText" class="clue-value"></p>
+      <div class="button-row">
+        <button id="allowClueBtn" class="button primary" type="button" data-i18n="allowClue">السماح بالتلميح</button>
+        <button id="rejectClueBtn" class="button danger" type="button" data-i18n="rejectClue">رفض التلميح</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="logsDialog" class="modal large-modal">
+    <div class="modal-card">
+      <div class="section-heading">
+        <h2 id="logsTitle">Logs</h2>
+        <button id="closeLogsBtn" class="icon-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div id="logsContent" class="logs-content"></div>
+      <div class="button-row wrap">
+        <button id="copyLogsBtn" class="button secondary" type="button" data-i18n="copyLogs">نسخ السجل</button>
+        <button id="downloadLogsBtn" class="button secondary" type="button" data-i18n="downloadLogs">تنزيل JSON</button>
+        <button id="clearLogsBtn" class="button danger" type="button" data-i18n="clearLogs">مسح السجل</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="wordsDialog" class="modal large-modal">
+    <div class="modal-card">
+      <div class="section-heading">
+        <h2 data-i18n="manageWords">إدارة الكلمات</h2>
+        <button id="closeWordsBtn" class="icon-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div class="two-columns">
+        <label class="field">
+          <span data-i18n="wordFormat">الصيغة</span>
+          <select id="wordFormatSelect">
+            <option value="auto" data-i18n="formatAuto">تلقائي</option>
+            <option value="txt">TXT — ar|en</option>
+            <option value="csv">CSV — ar,en</option>
+            <option value="json">JSON</option>
+          </select>
+        </label>
+        <label class="field">
+          <span data-i18n="chooseFile">اختر ملف TXT / CSV / JSON</span>
+          <input id="wordFileInput" type="file" accept=".txt,.csv,.json,text/plain,text/csv,application/json">
+        </label>
+      </div>
+      <label class="field">
+        <span data-i18n="pasteWords">الصق الكلمات هنا</span>
+        <textarea id="wordTextarea" rows="12" spellcheck="false" placeholder="قمر|Moon&#10;شجرة|Tree"></textarea>
+      </label>
+      <p class="small muted" data-i18n="wordHelp"></p>
+      <div id="wordImportResult" class="message" hidden></div>
+      <div class="button-row wrap">
+        <button id="importWordsBtn" class="button primary" type="button" data-i18n="import">استيراد</button>
+        <button id="revertWordsBtn" class="button secondary" type="button" data-i18n="revertDefault">العودة للافتراضية</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+
+  <!-- Online multiplayer: configure js/firebase-config.js first. -->
+  <script src="js/firebase-config.js"></script>
+  <script defer src="js/lobby-v14.js?v=14.0"></script>
+  <script type="module" src="js/online.js?v=14.0"></script>
+</body>
+</html>
