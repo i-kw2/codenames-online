@@ -1,0 +1,12 @@
+V10 requested changes
+Date: 2026-09-11
+
+1) Replaced the revealed-card "تم الاختيار / Picked" visual in Operative View with the supplied card artwork.
+2) Added exactly 25 supplied card images under assets/cards/ and optimized them to WebP for faster mobile/web loading.
+3) Every newly generated round shuffles the 25 images and assigns exactly one unique image to each of the 25 board cards.
+4) Image assignment is stored in the round board state, so online players in the same room see the same reveal image for the same card.
+5) Reset Round starts a fresh round and therefore reshuffles image positions again.
+6) Preserved V9 gameplay rules, Firebase room flow, bilingual behavior, responsive board layout, and existing reveal/game logic.
+7) Added tests for unique 25-image assignment and reshuffling across new boards.
+
+Version: v10
