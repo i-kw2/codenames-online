@@ -1,0 +1,9 @@
+Codenames Bilingual V13
+=======================
+
+Changes in V13:
+- Restored the spymaster unrevealed board to show classic role colours only.
+- Spymaster unrevealed cards no longer use the V12 white frame style and do not show images.
+- Revealed cards still show the original image with a role-coloured border.
+- Operative view remains the same as V12: white frame before reveal, coloured frame after reveal.
+- No overlay/tint/blend mode was reintroduced.
