@@ -1,0 +1,19 @@
+CODENAMES ONLINE V2 — ابدأ من هنا
+==================================
+
+1) افتح المشروع في Visual Studio Code.
+2) افتح الملف SETUP-ONLINE.md.
+3) طبق PART 2 إلى PART 7 لإعداد Firebase.
+4) الصق Firebase config الحقيقي في js/firebase-config.js.
+5) شغل index.html باستخدام Live Server.
+6) جرّب Create Room + Invite Link في Incognito وتأكد أن Welcome to Codenames يظهر ثم ENTER GAME يعمل.
+7) طبق PART 9 و PART 10 لرفع المشروع على GitHub Pages.
+8) بعدها افتح رابط GitHub Pages واضغط Create Room وأرسل Invite Link لربعك.
+
+مهم:
+- لا تحتاج npm install.
+- لا تحتاج Node.js.
+- لا تحذف firebase-rules.json. في V17 يجب إعادة نشره في Firebase Realtime Database Rules حتى يعمل الدخول الحديث أثناء Lobby وأثناء المباراة. V17 يستطيع الرجوع تلقائياً إلى مخطط V13 القديم للدخول إلى Lobby فقط إذا بقيت القواعد القديمة، لكن الانضمام أثناء مباراة جارية يحتاج قواعد V17 المنشورة.
+- لا تضع Service Account private key داخل المشروع.
+
+الدليل الكامل: SETUP-ONLINE.md

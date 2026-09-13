@@ -1,0 +1,11 @@
+Codenames Bilingual V17
+
+- Fixed invite join failures caused by Firebase rule/schema drift.
+- Join flow now tries the V17 spectator payload first, then automatically falls back to the V13 lobby payload when permission is denied.
+- Legacy V13 guests are rendered as spectators by the V17 lobby UI.
+- Added host-processed assignSelf action fallback so legacy-rule guests can still choose teams in the Lobby.
+- Host action processor now runs in Lobby for room-management actions without requiring a secret game map.
+- Added authenticated public room entry metadata (rulesVersion/status/roomName) with no secret game data.
+- Added clearer diagnostics for old rules / App Check permission failures.
+- Added V17 cache-busting query strings so browsers do not keep online.js from V16.
+- Game engine remains unchanged from V13.

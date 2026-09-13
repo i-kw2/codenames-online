@@ -1,0 +1,44 @@
+CODENAMES BILINGUAL — V16
+=========================
+
+Primary fix: Invite links now work as a true room-entry gate.
+
+INVITE ENTRY
+- Opening ?room=XXXXXX shows the exact reference flow:
+  Welcome to Codenames
+  To enter the room, choose a nickname.
+  [Nickname]
+  ENTER GAME
+- The room/lobby shell remains visible behind a strong blur + dark overlay.
+- No close button is provided; the visitor must choose a nickname to enter.
+- The room code comes from the invite URL automatically.
+- Pressing Enter in the form is equivalent to pressing ENTER GAME.
+- New visitors enter as Spectators.
+
+JOIN DURING ACTIVE MATCH
+- New authenticated anonymous visitors may join while room status is lobby OR playing.
+- A visitor who joins an active match can choose team/role from Settings -> Player.
+- V16 automatically opens the Player settings tab after an invite join into an already-running match.
+- Team/role selection during a running match is allowed even though the match-start lock remains set.
+- One-Spymaster-per-team client validation remains in place.
+
+REALTIME CONSISTENCY
+- Live Firebase player records are injected into the current game snapshot, so players who join/change teams mid-match appear in the active roster.
+- Explicit Leave Match removes the player record during lobby or playing; accidental disconnect still uses presence/offline handling.
+- Host action authorization continues to use the live room player role/team.
+
+FIREBASE RULES
+- Player self-create as Spectator is allowed when status is lobby OR playing.
+- Self team/role change is allowed while playing.
+- Lobby Lock Teams still blocks non-host self assignment before the game starts.
+- Delete/leave is allowed during lobby OR playing.
+- Secret role map remains readable only by Host and Spymasters.
+
+PRESERVED
+- V13 game.js is byte-for-byte unchanged.
+- V13 ui.js is byte-for-byte unchanged.
+- V15/V13 restored color system remains the default room visual system.
+
+IMPORTANT DEPLOYMENT REQUIREMENT
+Upload the V16 site files AND publish the V16 firebase-rules.json in Firebase Realtime Database -> Rules.
+If the website files are updated but the old rules remain published, invite joining can still fail with permission_denied.
