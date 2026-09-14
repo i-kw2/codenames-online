@@ -1,0 +1,54 @@
+Codenames Bilingual — V18
+=========================
+
+V18 keeps the stable V17 invite/Firebase/lobby flow and adds only the requested in-game presentation and shared event UI.
+
+1) Opening 25-card deal animation
+- The board starts visually empty.
+- All 25 cards deal one-by-one from one shared bottom-center origin.
+- Row-major order: left-to-right across row 1, then rows 2–5.
+- 560 ms flight per card, 72 ms stagger, strong ease-out, tiny 4 px settle.
+- No flip, spin, large scaling, or fade-in.
+- Board interaction is locked until the last card settles.
+- Reduced Motion skips/shortens the large movement.
+- Late online joiners do not replay the opening deal on an already-running round.
+
+2) In-game Operative + Spymaster interface
+- Stable three-column desktop composition: Blue left, 5×5 board center, Red right.
+- Team Operatives and Spymasters are shown with live player avatars/names.
+- Current actionable role receives an active-turn outline.
+- Spymaster sees the secret role colors and the clue composer.
+- Operatives see neutral unrevealed cards and a read-only clue bar during guessing.
+- Current clue word, number, remaining agents, and phase instruction are visible in-game.
+- The existing V17 online authorization and secret-map permissions remain intact.
+
+3) Synchronized clue announcement
+- Submitting a clue publishes the same CLUE_SUBMITTED event already synchronized in publicGame.
+- Every client in the running game receives a centered clue announcement with word + count.
+- Normal lifetime is ~3 seconds (fade/scale in, readable hold, fade out).
+- The board is locked while the announcement is active so nobody can guess early.
+- The clue remains in the bottom clue bar and Game Log after the center announcement disappears.
+
+4) Shared Game Log
+- Persistent, collapsible lower-right Game Log visible to everyone in the active room.
+- Groups events by team turn.
+- Each clue header shows team color, Spymaster avatar/name, clue word, and clue count.
+- Guess rows show the acting Operative, guessed word, and outcome marker.
+- The log is generated from public synchronized game-state logs; it is not a chat box.
+- Actor id/name metadata was added to clue, guess, and end-turn logs so all clients see who performed the event.
+- Scrolls internally; does not grow over the board.
+
+Compatibility / safety
+- firebase-rules.json is byte-for-byte unchanged from V17.
+- js/firebase-config.js is byte-for-byte unchanged from V17.
+- V17 invitation entry gate and join compatibility logic are preserved.
+- Core game rules are unchanged; game.js changes only add optional actor metadata to existing log events.
+- Existing function signatures remain backward compatible because new actor arguments are optional.
+
+Verification
+- 41/41 zero-dependency Game + UI tests pass.
+- JavaScript syntax checks pass.
+- firebase-rules.json parses as valid JSON.
+- CSS parses with zero top-level syntax errors.
+- HTML IDs are unique and required UI references are present.
+- Local HTML/CSS asset references resolve.
