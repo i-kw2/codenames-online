@@ -1,0 +1,24 @@
+Codenames Bilingual V11
+======================
+
+Scope: image-colour treatment only. Gameplay and v10 logic are unchanged.
+
+- Uses the 25 untouched PNG source images from Normal.zip under assets/cards/.
+- No image is cropped, resized, recoloured, recompressed, or otherwise edited.
+- Revealed cards receive a full-size browser overlay according to the card role:
+  * Red agent: red hard-light overlay.
+  * Blue agent: blue hard-light overlay.
+  * Neutral: beige hard-light overlay.
+  * Assassin: black overlay blend for black/charcoal shadows and smoky highlights.
+- Overlay is CSS-only at display time. Original image bytes remain identical to the supplied files.
+- Existing v10 game flow, online sync, dimensions, aspect ratio, framing, and image assignment behaviour are preserved.
+
+UPDATED:
+- Removed the legacy pre-coloured WebP card images; the project now ships only with the 25 provided original PNG reveal cards.
+- Spymaster view now shows the same reveal image after a card is chosen, while still keeping secret-role visibility for unrevealed cards.
+
+V11 IMAGE PATH FIX:
+- Moved the supplied 25 PNG reveal cards to assets/cards/ so the hosted URLs use the same stable asset directory as previous versions.
+- Added compatibility fallback for room snapshots that still contain assets/cards/original/... paths.
+- Added cache-busting query strings to CSS/JS includes so browsers load the corrected V11 files after redeployment.
+- Broken-image browser icon is hidden if an asset is actually absent.
