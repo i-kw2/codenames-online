@@ -1,0 +1,26 @@
+Codenames Bilingual — 0.2.2v
+
+Changes
+=======
+1. Lobby QR invite
+   - Added a QR Invite button beside Reset teams in #lobbySection.
+   - The QR encodes the same ?room=XXXXXX invitation URL used by the existing invite flow.
+   - Scanning it opens #inviteEntryGate first; after nickname entry the guest joins the same #lobbySection room.
+   - QR generation is bundled locally in js/qrcode-local.js, so no extra CDN is required for QR rendering.
+
+2. Player profile save fix
+   - Saving nickname + avatar is atomic under modern Firebase rules.
+   - Added a host-mediated saveProfile fallback for older deployed rule sets that reject guest multi-field profile writes.
+   - After a successful save while in the pre-game lobby, Settings closes and the UI returns/focuses #lobbySection.
+
+3. Join sound
+   - Added a short join chime through the existing Codenames Effects audio system.
+   - It respects the existing mute/effects-volume controls and does not fire for the initial player snapshot.
+
+4. Background replacement + blur
+   - Replaced assets/BG.png with the exact newly supplied image.
+   - Added assets/BG-blur.png using a subtle 10px Gaussian blur equivalent.
+   - All previously requested menu/lobby/game/modal/overlay/end-state backgrounds continue to use the shared blurred artwork.
+
+5. Version/cache
+   - Updated project version to 0.2.2v and CSS/JS cache-busters to ?v=0.2.2.

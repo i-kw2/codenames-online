@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Codenames Tests</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:980px;margin:30px auto;padding:0 16px;background:#f6f3ec;color:#222}
+    h1{margin-bottom:6px}.muted{color:#666}.toolbar{display:flex;gap:10px;align-items:center;margin:18px 0}
+    button{padding:9px 14px;border-radius:9px;border:1px solid #bbb;background:#fff;font-weight:700;cursor:pointer}
+    .result{padding:10px 12px;margin:7px 0;border-radius:9px;border:1px solid #ddd;background:#fff}
+    .pass{border-color:#8bb58c;background:#edf8ed}.fail{border-color:#d28a8a;background:#fdeeee}
+    code{font-family:ui-monospace,Consolas,monospace}.summary{font-weight:800;font-size:1.1rem}
+  </style>
+  <script defer src="../js/words.js"></script>
+  <script defer src="../js/i18n.js"></script>
+  <script defer src="../js/utils.js"></script>
+  <script defer src="../js/game.js"></script>
+  <script defer src="game.test.js"></script>
+  <script defer src="ui.test.js"></script>
+</head>
+<body>
+  <h1>Zero-dependency browser tests</h1>
+  <p class="muted">Open this file directly or through VS Code Live Server.</p>
+  <div class="toolbar"><button id="runTests" type="button">Run tests</button><span id="summary" class="summary"></span></div>
+  <div id="results"></div>
+
+  <script>
+    window.TestHarness = (function(){
+      const tests=[];
+      function test(name,fn){tests.push({name,fn});}
+      function ok(value,message){if(!value)throw new Error(message||`Expected truthy value, got ${value}`);}
+      function equal(actual,expected,message){if(actual!==expected)throw new Error(message||`Expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);}
+      function deepEqual(actual,expected,message){const a=JSON.stringify(actual);const e=JSON.stringify(expected);if(a!==e)throw new Error(message||`Expected ${e}, got ${a}`);}
+      async function run(){
+        const out=document.getElementById('results');out.replaceChildren();let passed=0;
+        for(const item of tests){
+          const row=document.createElement('div');row.className='result';
+          try{await item.fn();passed++;row.classList.add('pass');row.textContent=`✓ ${item.name}`;}
+          catch(error){row.classList.add('fail');row.textContent=`✗ ${item.name}\n${error.stack||error.message}`;row.style.whiteSpace='pre-wrap';}
+          out.appendChild(row);
+        }
+        document.getElementById('summary').textContent=`${passed}/${tests.length} passed`;
+        return {passed,total:tests.length};
+      }
+      document.addEventListener('DOMContentLoaded',()=>{document.getElementById('runTests').addEventListener('click',run);setTimeout(run,0);});
+      return {test,ok,equal,deepEqual,run,tests};
+    })();
+  </script>
+</body>
+</html>
